@@ -36,5 +36,4 @@ python train_128.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test 
 
 
 ##Reference
-
 Some codes are directly borrowed from [ProGAN](https://github.com/tkarras/progressive_growing_of_gans)
