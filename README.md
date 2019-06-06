@@ -29,8 +29,11 @@ python train_128.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test 
 ![image_sample0](./results/sampling0.jpg)
 
 ### Reconstruction
+|ffhq images|reconstructed images|
+|:---------:|:---------:|
+|![image_orin](./results/orin.png) | ![image_recon](./results/recon.png) |
 
-![image_orin](./results/orin.png) ![image_recon](./results/recon.png)
+
 
 ##Reference
 Some codes are directly borrowed from [ProGAN](https://github.com/tkarras/progressive_growing_of_gans)
