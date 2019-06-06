@@ -26,7 +26,7 @@ python train_128.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test 
 
 ## Sampling
 
-![image_sample0](./results/sampling0.jpg) ![image_sample1](./results/sampling1.jpg)
+![image_sample0](./results/sampling0.jpg)
 
 ## Reconstruction
 
