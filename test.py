@@ -12,9 +12,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--experiment', '-e', default='cifar10')
-parser.add_argument('--data_dir', '-d', default='/home/jiapeng/Desktop/-r07.tfrecords', type=str)
-parser.add_argument('--test_dir', '-l', default='log_128')
-parser.add_argument('--checkpoint_dir', '-c', default='checkpoints-128/model-ckpt')
+parser.add_argument('--data_dir', '-d', default='./-r07.tfrecords', type=str)
+parser.add_argument('--test', '-l', default='log_128')
+parser.add_argument('--checkpoints', '-c', default='checkpoints/model-ckpt')
 parser.add_argument('--load_model', default=None, type=str)
 parser.add_argument('--batch_size', default=25, type=int)
 parser.add_argument('--beta1', default=0.5, type=float)
@@ -70,7 +70,6 @@ def main():
 
     Reconstruction = generator_x(generator_z(real, reuse=True), reuse=True)
 
-
     saver = tf.train.Saver()
     sess = tensorflow_session()
 
@@ -86,7 +85,7 @@ def main():
         os.mkdir(args.log_dir)
 
 
-    ## Generator
+    ## Reconstruction
     for it in tqdm(range(200)):
 
         batch_images = sess.run(image_batch)
@@ -94,17 +93,17 @@ def main():
 
         recon = sess.run(Reconstruction, feed_dict={real: batch_images})
         recon = adjust_dynamic_range(recon.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1, 1])
-        imwrite(immerge(recon[:25, :, :, :], 5, 5), '%s/epoch_%04d_recon.jpg' % (args.log_dir, it))
+        imwrite(immerge(recon[:25, :, :, :], 5, 5), '%s/epoch_%04d_recon.png' % (args.log_dir, it))
 
         batch_images = adjust_dynamic_range(batch_images.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1, 1])
-        imwrite(immerge(batch_images[:25, :, :, :], 5, 5), '%s/epoch_%04d_orin.jpg' % (args.log_dir, it))
+        imwrite(immerge(batch_images[:25, :, :, :], 5, 5), '%s/epoch_%04d_orin.png' % (args.log_dir, it))
 
-
-    for it in tqdm(range(2000)) 
+    # Sampling
+    for it in tqdm(range(200)):
         latent_z = np.random.randn(args.batch_size, z_dim).astype(np.float32)
         samples1 = sess.run(G_x, feed_dict={z: latent_z})
         samples1 = adjust_dynamic_range(samples1.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1,1])
-        imwrite(immerge(samples1[:25, :, :, :], 5, 5), '%s/epoch_%04d_sampling.jpg' % (args.log_dir, it))
+        imwrite(immerge(samples1[:25, :, :, :], 5, 5), '%s/epoch_%04d_sampling.png' % (args.log_dir, it))
 
 
 

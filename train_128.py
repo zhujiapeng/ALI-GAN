@@ -10,10 +10,10 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 parser = argparse.ArgumentParser()
 parser.add_argument('--image_size', default=128, type=int)
 parser.add_argument('--z_dim', default=256, type=int)
-parser.add_argument('--data_dir', default='./-r07.tfrecords', type=str)
-parser.add_argument('--log_dir', default='log_128')
-parser.add_argument('--checkpoint_dir', default='checkpoints-128/model-ckpt')
-parser.add_argument('--load_model', default=None, type=str)
+parser.add_argument('--data_dir_train', default='./-r07.tfrecords', type=str)
+parser.add_argument('--data_dir_test', default='./-r07.tfrecords', type=str)
+parser.add_argument('--log_dir', default='logs')
+parser.add_argument('--checkpoints', default='checkpoints=/model-ckpt')
 parser.add_argument('--batch_size', default=100, type=int)
 parser.add_argument('--beta1', default=0.5, type=float)
 parser.add_argument('--beta2', default=0.999, type=float)
@@ -22,13 +22,13 @@ parser.add_argument('--learning_rate', default=0.0001, type=float)
 
 args = parser.parse_args()
 
-
 def parse_tfrecord_tf(record):
     features = tf.parse_single_example(record, features={
         'shape': tf.FixedLenFeature([3], tf.int64),
         'data': tf.FixedLenFeature([], tf.string)})
     data = tf.decode_raw(features['data'], tf.uint8)
     return tf.reshape(data, features['shape'])
+
 
 def adjust_dynamic_range(data, drange_in, drange_out):
     if drange_in != drange_out:
@@ -38,6 +38,7 @@ def adjust_dynamic_range(data, drange_in, drange_out):
         data = data * scale + bias
     return data
 
+
 def tensorflow_session():
     # Init session and params
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
@@ -45,6 +46,7 @@ def tensorflow_session():
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     return sess
+
 
 def get_train_data(sess, data_dir, batch_size):
     dset = tf.data.TFRecordDataset(data_dir)
@@ -55,6 +57,7 @@ def get_train_data(sess, data_dir, batch_size):
     image_batch = train_iterator.get_next()
     sess.run(training_init_op)
     return image_batch
+
 
 def main():
 
@@ -89,7 +92,7 @@ def main():
     G_solver = tf.train.AdamOptimizer(lr_g, args.beta1, args.beta2).minimize(G_loss, var_list=Genx_vars+Genz_vars)
     D_solver = tf.train.AdamOptimizer(lr_d, args.beta1, args.beta2).minimize(D_loss, var_list=Dis_vars)
 
-    saver = tf.train.Saver(max_to_keep=10)
+    saver = tf.train.Saver(max_to_keep=5)
     sess = tensorflow_session()
 
     if args.restore_path != '':
@@ -100,7 +103,8 @@ def main():
         sess.run(tf.global_variables_initializer())
 
     print('Getting training HQ data...')
-    image_batch = get_train_data(sess, data_dir=args.data_dir, batch_size=args.batch_size)
+    image_batch_train = get_train_data(sess, data_dir=args.data_dir_train, batch_size=args.batch_size)
+    image_batch_test = get_train_data(sess, data_dir=args.data_dir_test, batch_size=args.batch_size)
 
     if not os.path.exists(args.log_dir):
         os.mkdir(args.log_dir)
@@ -111,30 +115,31 @@ def main():
     for it in range(120000):
 
         latent_z = np.random.randn(args.batch_size, args.z_dim).astype(np.float32)
-        batch_images = sess.run(image_batch)
-        batch_images = adjust_dynamic_range(batch_images.astype(np.float32), [0, 255], [0., 1.])
+        batch_images_train = sess.run(image_batch_train)
+        batch_images_train = adjust_dynamic_range(batch_images_train.astype(np.float32), [0, 255], [0., 1.])
 
-        feed_dict_1 = {real: batch_images, z: latent_z, lr_g: args.learning_rate*10, lr_d: args.learning_rate*0.1}
+        feed_dict_1 = {real: batch_images_train, z: latent_z, lr_g: args.learning_rate*10, lr_d: args.learning_rate*0.1}
         _, d_loss_real, d_loss_fake = sess.run([D_solver, D_loss_real, D_loss_fake], feed_dict=feed_dict_1)
         _, g_loss_img, g_loss_z = sess.run([G_solver, G_loss_img, G_loss_z], feed_dict=feed_dict_1)
-
 
         if it % 50 == 0:
             print('Iter: {}  g_loss_img: {} g_loss_z: {} d_r_loss: {} d_f_loss_: {}'.format(
                 it, g_loss_img, g_loss_z, d_loss_real, d_loss_fake))
 
-            if it % 500 == 0:
+            if it % 1000 == 0:
                 samples1 = sess.run(G_x, feed_dict={z: latent_z})
                 samples1 = adjust_dynamic_range(samples1.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1,1])
-                imwrite(immerge(samples1[:64, :, :, :], 8, 8), '%s/epoch_%d_sampling.jpg' % (args.log_dir, it))
+                imwrite(immerge(samples1[:36, :, :, :], 6, 6), '%s/epoch_%d_sampling.png' % (args.log_dir, it))
 
-                recon = sess.run(Reconstruction, feed_dict={real: batch_images})
+                batch_images_test = sess.run(image_batch_test)
+                batch_images_test = adjust_dynamic_range(batch_images_test.astype(np.float32), [0, 255], [0., 1.])
+
+                recon = sess.run(Reconstruction, feed_dict={real: batch_images_test})
                 recon = adjust_dynamic_range(recon.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1, 1])
-                imwrite(immerge(recon[:64, :, :, :], 8, 8), '%s/epoch_%d_recon.jpg' % (args.log_dir, it))
+                imwrite(immerge(recon[:36, :, :, :], 6, 6), '%s/epoch_%d_recon.png' % (args.log_dir, it))
 
-                batch_images = adjust_dynamic_range(batch_images.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1, 1])
-                imwrite(immerge(batch_images[:64, :, :, :], 8, 8), '%s/epoch_%d_orin.jpg' % (args.log_dir, it))
-
+                batch_images = adjust_dynamic_range(batch_images_test.transpose(0, 2, 3, 1), drange_in=[0, 1], drange_out=[-1, 1])
+                imwrite(immerge(batch_images[:36, :, :, :], 6, 6), '%s/epoch_%d_orin.png' % (args.log_dir, it))
 
         if np.mod(it, 10000) == 0 and it > 50000:
             saver.save(sess, args.checkpoint_dir, global_step=it)
