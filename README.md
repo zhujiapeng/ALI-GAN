@@ -19,7 +19,7 @@ A simple tensorflow implement of [Adversarially Learned Inference](https://arxiv
 ## Run
 
 ```
-python train.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test PATH TO YOUR TRAIN Dataset
+python train_128.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test PATH TO YOUR TRAIN Dataset
 ```
 
 # Result
