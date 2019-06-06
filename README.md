@@ -22,15 +22,19 @@ A simple tensorflow implement of [Adversarially Learned Inference](https://arxiv
 python train_128.py --data_dir_train PATH TO YOUR TRAIN Dataset --data_dir_test PATH TO YOUR TRAIN Dataset
 ```
 
-# Result
+## Result
 
-## Sampling
+### Sampling
 
 ![image_sample0](./results/sampling0.jpg)
 
-## Reconstruction
+### Reconstruction
 
-![image_orin](./results/orin.png) ![image_recon](./results/recon.png)
+ffhq images
+![image_orin](./results/orin.png)
 
+reconstructed images 
+![image_recon](./results/recon.png)
 
+##Reference
 Some codes are directly borrowed from [ProGAN](https://github.com/tkarras/progressive_growing_of_gans)
